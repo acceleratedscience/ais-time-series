@@ -2,7 +2,7 @@
 
 IBM Time Series Analysis Suite.
 
-This project provides a time-series forecasting service using the `ibm-granite/granite-timeseries-ttm-r2` model, served with [LitServe](https://github.com/Lightning-AI/litserve).
+This project provides a time-series forecasting service using the `ibm-granite/granite-timeseries-ttm-r2` model, served with [LitServe](https://github.com/Lightning-AI/litserve). View hugging face model card [here](https://huggingface.co/ibm-granite/granite-timeseries-ttm-r2).
 
 ## Features
 
@@ -56,6 +56,8 @@ python main.py
 The server will start on `http://127.0.0.1:8081`.
 
 ### Running the Example Client
+
+> The client is based off the community notebook [Time_Series_Getting_Started](https://github.com/ibm-granite-community/granite-timeseries-cookbook/blob/main/recipes/Time_Series/Time_Series_Getting_Started.ipynb)
 
 In a separate terminal, you can run the example client to send a sample request to the running server:
 
