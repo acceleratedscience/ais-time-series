@@ -1,0 +1,20 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.python-version
+.venv/
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Project specific
+notebooks/
+charts/
+README.md

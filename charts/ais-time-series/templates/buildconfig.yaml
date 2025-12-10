@@ -1,0 +1,57 @@
+{{- if eq .Values.deploymentType "build" }}
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: {{ include "openad-model.fullname" . }}
+  labels:
+    {{- include "openad-model.labels" . | nindent 4 }}
+spec:
+  source:
+    git:
+      uri: {{ .Values.buildConfig.gitUri }}
+      ref: {{ .Values.buildConfig.gitRef }}
+    contextDir: {{ .Values.buildConfig.contextDir | default "" }}
+    {{- if not (empty .Values.buildConfig.sourceSecret.name) }}
+    sourceSecret:
+      name: {{ .Values.buildConfig.sourceSecret.name }}
+    {{- end }}
+  strategy:
+    type: {{ .Values.buildConfig.strategy }}
+    dockerStrategy:
+      dockerfilePath: {{ .Values.buildConfig.dockerfilePath }}
+
+      {{- if and (not (empty .Values.buildConfig.sourceSecret.name)) (eq .Values.buildConfig.sourceSecret.type "ssh") }}
+      # SSH mode
+      volumes:
+        - name: ssh-key-volume
+          mounts:
+            - destinationPath: /root/.ssh
+          source:
+            type: Secret
+            secret:
+              secretName: {{ .Values.buildConfig.sourceSecret.name }}
+              defaultMode: 0600
+      {{- else if and (not (empty .Values.buildConfig.sourceSecret.name)) (eq .Values.buildConfig.sourceSecret.type "pat") }}
+      # PAT mode: inject both username and password
+      env:
+        - name: GITHUB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.buildConfig.sourceSecret.name }}
+              key: username
+        - name: GITHUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.buildConfig.sourceSecret.name }}
+              key: password
+      {{- end }}
+  triggers:
+    - type: ConfigChange
+    - type: GitHub
+      github:
+        secret: {{ .Values.buildConfig.githubSecret | default "github-webhook-secret" }}
+  output:
+    to:
+      kind: ImageStreamTag
+      name: "{{ include "openad-model.fullname" . }}:latest"
+{{- end }}

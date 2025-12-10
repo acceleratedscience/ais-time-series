@@ -149,4 +149,4 @@ if __name__ == "__main__":
     )
 
     server = ls.LitServer(api, accelerator="auto")
-    server.run(port=8081, generate_client_file=False)
+    server.run(host="0.0.0.0", port=8081, generate_client_file=False)
