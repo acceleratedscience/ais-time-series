@@ -55,6 +55,15 @@ python main.py
 
 The server will start on `http://127.0.0.1:8081`.
 
+### Running with Docker
+
+Build and run the Docker container locally:
+
+```bash
+docker build -t ais-time-series .
+docker run -p 8081:8081 ais-time-series
+```
+
 ### Running the Example Client
 
 > The client is based off the community notebook [Time_Series_Getting_Started](https://github.com/ibm-granite-community/granite-timeseries-cookbook/blob/main/recipes/Time_Series/Time_Series_Getting_Started.ipynb)
@@ -143,3 +152,31 @@ The API will return a JSON object containing the forecast.
 }
 ```
 *(Note: The prediction values above are illustrative and not the actual model output.)*
+
+## Deployment
+
+This application is designed to be deployed in a containerized environment, such as OpenShift or Kubernetes.
+
+### Helm
+
+The application can be deployed using the Helm chart located in the `charts/` directory.
+
+```bash
+helm upgrade --install ais-time-series ./charts/ais-time-series -n <namespace>
+```
+
+### Helmfile
+
+To deploy with [helmfile](https://helmfile.readthedocs.io/en/latest/), apply the `helmfile.yaml`
+
+```bash
+helmfile -f charts/helmfile.yaml apply
+```
+
+### ArgoCD
+
+To deploy with ArgoCD, apply the `application.yaml` manifest:
+
+```bash
+oc apply -f charts/argocd/application.yaml
+```
