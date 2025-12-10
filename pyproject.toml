@@ -15,3 +15,7 @@ dependencies = [
 
 [tool.uv.pip]
 torch-backend = "auto"
+
+[tool.uv]
+# pin override until the next release of fastmcp 2.14.x
+override-dependencies = ["mcp>=1.23.3"]
