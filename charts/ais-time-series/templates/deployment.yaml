@@ -1,0 +1,130 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "openad-model.fullname" . }}
+  labels:
+    {{- include "openad-model.labels" . | nindent 4 }}
+    app.openshift.io/runtime: python
+    app.openshift.io/build-config: {{ include "openad-model.fullname" . }}
+  annotations:
+    app.openshift.io/connects-to: {{ include "openad-model.fullname" . }}
+    app.openshift.io/vcs-uri: {{ .Values.buildConfig.gitUri }}
+    app.openshift.io/vcs-ref: {{ .Values.buildConfig.gitRef }}
+    app.openshift.io/builds: '{"kind":"BuildConfig","namespace":"{{ .Release.Namespace }}","name":"{{ include "openad-model.fullname" . }}"}'
+    image.openshift.io/triggers: '[{"from":{"kind":"ImageStreamTag","name":"{{ include "openad-model.fullname" . }}:latest","namespace":"{{ .Release.Namespace }}"},"fieldPath":"spec.template.spec.containers[?(@.name==\"{{ .Chart.Name }}\")].image","pause":"false"}]'
+    app.openshift.io/build-source: '{"type":"git","git":{"uri":"{{ .Values.buildConfig.gitUri }}","ref":"{{ .Values.buildConfig.gitRef }}"}}'
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "openad-model.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "openad-model.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.image.pullSecret }}
+      imagePullSecrets:
+        - name: {{ . }}
+      {{- end }}
+      serviceAccountName: {{ include "openad-model.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- if eq .Values.deploymentType "build" }}
+          # Use BuildConfig image
+          image:  "image-registry.openshift-image-registry.svc:5000/{{ .Release.Namespace }}/{{ include "openad-model.fullname" . }}:latest"
+          {{- else if eq .Values.deploymentType "image" }}
+           # Use external image
+          image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          {{- end }}
+          imagePullPolicy: {{ .Values.application.pullPolicy }}
+          # command: ["/bin/sh", "-c", "sleep infinity"]  # for debugging
+          env:
+            {{- range .Values.application.env }}
+            {{- range $key, $value := . }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- end }}
+          {{- if .Values.application.envFrom }}
+          envFrom:
+            {{- toYaml .Values.application.envFrom | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.volumeMounts }}
+          volumeMounts:
+            {{- toYaml .Values.volumeMounts | nindent 12 }}
+          {{- end }}
+        {{- if .Values.s3sync.enabled }}
+        - name: s3-sync-sidecar
+          image: "{{ .Values.s3sync.image }}"
+          command:
+            - /bin/sh
+            - -c
+            - |
+              while true; do
+                {{- range .Values.s3sync.targets }}
+                {{- if or (not .direction) (eq .direction "s3tolocal") }}
+                aws s3 sync {{ .s3Uri }} {{ .localPath }} --region {{ $.Values.s3sync.region }};
+                {{- else if eq .direction "localtos3" }}
+                aws s3 sync {{ .localPath }} {{ .s3Uri }} --region {{ $.Values.s3sync.region }};
+                {{- else if eq .direction "twoway" }}
+                aws s3 sync {{ .s3Uri }} {{ .localPath }} --region {{ $.Values.s3sync.region }};
+                aws s3 sync {{ .localPath }} {{ .s3Uri }} --region {{ $.Values.s3sync.region }};
+                {{- end }}
+                {{- end }}
+                sleep {{ .Values.s3sync.syncInterval }};
+              done
+          {{- if .Values.application.envFrom }}
+          envFrom:
+            {{- toYaml .Values.application.envFrom | nindent 12 }}
+          {{- end }}
+          env:
+            - name: AWS_DEFAULT_REGION
+              value: {{ .Values.s3sync.region | quote }}
+          {{- if .Values.volumeMounts }}
+          volumeMounts:
+            {{- toYaml .Values.volumeMounts | nindent 12 }}
+          {{- end }}
+        {{- end }}
+      {{- if and .Values.volumeMounts }}
+      {{- if .Values.volumes }}
+      volumes:
+        {{- toYaml .Values.volumes | nindent 8 }}
+      {{- end }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+

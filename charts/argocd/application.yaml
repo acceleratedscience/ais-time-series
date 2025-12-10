@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ais-time-series
+  namespace: openshift-gitops
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/acceleratedscience/ais-time-series.git'
+    targetRevision: main
+    path: charts/ais-time-series
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: openad-models
+  syncPolicy:
+    automated: {}
+    # syncOptions:
+    #   - Prune=false
+  ignoreDifferences: # ignore differences in image tag to avoid constant out-of-sync status
+    - group: apps
+      kind: Deployment
+      name: ais-time-series
+      jqPathExpressions:
+        - '.spec.template.spec.containers[] | select(.name == "ais-time-series") | .image'

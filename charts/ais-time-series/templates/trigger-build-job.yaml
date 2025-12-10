@@ -1,0 +1,26 @@
+
+{{- if and (eq .Values.deploymentType "build") .Values.buildConfig.triggerBuild.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: trigger-build-{{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    argocd.argoproj.io/instance: {{ .Release.Name }}
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  template:
+    spec:
+      serviceAccountName: {{ include "openad-model.serviceAccountName" . }}
+      restartPolicy: Never
+      containers:
+        - name: oc-trigger
+          image: registry.redhat.io/openshift4/ose-cli
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Triggering build for {{ .Release.Name }}..."
+              oc start-build {{ .Release.Name }} -n {{ .Release.Namespace }} --wait
+{{- end }}
