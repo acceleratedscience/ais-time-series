@@ -1,0 +1,17 @@
+[project]
+name = "ais-time-series"
+version = "0.1.0"
+description = "IBM Time Series Analysis Suite"
+readme = "README.md"
+authors = [
+    { name = "Brian Duenas", email = "brian.duenas@ibm.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp>=2.13.3",
+    "granite-tsfm>=0.3.2",
+    "litserve>=0.2.16",
+]
+
+[tool.uv.pip]
+torch-backend = "auto"
