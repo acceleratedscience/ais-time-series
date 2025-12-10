@@ -55,9 +55,17 @@ python main.py
 
 The server will start on `http://127.0.0.1:8081`.
 
+### Running the Example Client
+
+In a separate terminal, you can run the example client to send a sample request to the running server:
+
+```bash
+python client.py
+```
+
 ## API Usage
 
-You can send a `POST` request to the default `/predict` endpoint to get a forecast.
+The server is designed to be robust, handling data cleaning (forward/backward fill for missing values) and validation internally. You can send a `POST` request to the default `/predict` endpoint to get a forecast.
 
 **Method:** `POST`
 
@@ -76,6 +84,7 @@ The request body must be a JSON object with the following structure:
   },
   "timestamp_col": "timestamp",
   "target_cols": ["value1", "value2"],
+  "freq": "h",
   "context_length": 512,
   "prediction_length": 96
 }
@@ -84,6 +93,7 @@ The request body must be a JSON object with the following structure:
 -   `data`: A dictionary containing lists of equal length. One list must correspond to the `timestamp_col`.
 -   `timestamp_col`: The name of the key in `data` that holds the timestamps.
 -   `target_cols`: A list of keys in `data` to be forecasted.
+-   `freq`: The frequency of the time series data, expressed as a pandas frequency string (e.g., `"h"` for hourly, `"D"` for daily). Defaults to `"h"`.
 -   `context_length`: The number of past time steps to use as input for the model. The number of entries in your data must be at least this large.
 -   `prediction_length`: The number of future time steps to forecast (the forecast horizon).
 
@@ -106,6 +116,7 @@ curl -X POST http://127.0.0.1:8081/predict \
     },
     "timestamp_col": "timestamp",
     "target_cols": ["value1"],
+    "freq": "h",
     "context_length": 8,
     "prediction_length": 2
 }'

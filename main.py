@@ -22,6 +22,7 @@ class TimeSeriesRequest(BaseModel):
     )
     timestamp_col: str = Field(..., description="Timestamp column name.")
     target_cols: List[str] = Field(..., description="List of target columns.")
+    freq: str = Field("h", description="Pandas frequency string, e.g., 'h', 'D'.")
     context_length: int = Field(
         512, description="Number of past timesteps to use as input."
     )
@@ -58,13 +59,24 @@ class TimeSeriesLitAPI(ls.LitAPI):
         df = pd.DataFrame(request.data)
         df[request.timestamp_col] = pd.to_datetime(df[request.timestamp_col])
         df = df.sort_values(request.timestamp_col).reset_index(drop=True)
-        # print("Decoded DataFrame head:\n", df.head())
+
+        # a. Validate target columns
+        for col in request.target_cols:
+            if col not in df.columns:
+                raise ValueError(f"Target column '{col}' not found in data.")
+            if not pd.api.types.is_numeric_dtype(df[col]):
+                raise ValueError(f"Target column '{col}' must be numeric.")
+
+        # b. Handle missing values defensively
+        df[request.target_cols] = df[request.target_cols].ffill().bfill()
+
         return {
             "df": df,
             "timestamp_col": request.timestamp_col,
             "target_cols": request.target_cols,
             "context_length": request.context_length,
             "prediction_length": request.prediction_length,
+            "freq": request.freq,
         }
 
     async def predict(self, x: dict, **kwargs):
@@ -77,6 +89,7 @@ class TimeSeriesLitAPI(ls.LitAPI):
         target_cols = x["target_cols"]
         context_length = x["context_length"]
         prediction_length = x["prediction_length"]
+        freq = x["freq"]
 
         # Create a pipeline.
         pipeline = TimeSeriesForecastingPipeline(
@@ -85,7 +98,7 @@ class TimeSeriesLitAPI(ls.LitAPI):
             id_columns=[],
             target_columns=target_cols,
             explode_forecasts=False,
-            freq="h",
+            freq=freq,
             device=self.device,
         )
 
