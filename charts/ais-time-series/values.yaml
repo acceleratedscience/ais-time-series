@@ -10,7 +10,7 @@ buildConfig:
   triggerBuild:
     enabled: true             # Enable or disable the build trigger Job for argocd
   gitUri: "https://github.com/acceleratedscience/ais-time-series.git"
-  gitRef: "containerize"              # Branch of the git repository
+  gitRef: "main"              # Branch of the git repository
   contextDir: ""
   strategy: Docker
   dockerfilePath: Dockerfile  # Path to the Dockerfile
